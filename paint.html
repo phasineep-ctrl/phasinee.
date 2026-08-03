@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Paint ของเรา</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+ 
+  :root{
+    --bg:#0a0b0f;
+    --panel:#12141b;
+    --panel-2:#181b25;
+    --border:#262a37;
+    --border-soft:#1d2029;
+    --text:#e9eaf0;
+    --muted:#828a9e;
+    --accent:#e0a041;
+    --accent-dim:rgba(224,160,65,0.14);
+    --accent-line:rgba(224,160,65,0.35);
+    --canvas-bg:#ffffff;
+  }
+ 
+  *{box-sizing:border-box;}
+ 
+  html,body{
+    margin:0;
+    height:100%;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans Thai','Space Grotesk',sans-serif;
+    font-weight:300;
+  }
+ 
+  body{
+    background:
+      radial-gradient(1200px 700px at 12% -10%, rgba(224,160,65,0.05), transparent 60%),
+      radial-gradient(900px 600px at 100% 110%, rgba(224,160,65,0.035), transparent 55%),
+      var(--bg);
+  }
+ 
+  .app{
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    height:100vh;
+    width:100vw;
+  }
+ 
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    padding:0 22px;
+    height:48px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+  }
+ 
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-right:6px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.01em;
+    color:var(--text);
+    white-space:nowrap;
+  }
+ 
+  .brand .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 8px var(--accent);
+  }
+ 
+  .menu{
+    display:flex;
+    gap:4px;
+    font-size:13px;
+    color:var(--muted);
+  }
+ 
+  .menu span{
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:default;
+    user-select:none;
+    transition:background .15s ease, color .15s ease;
+  }
+ 
+  .menu span:hover{ background:var(--panel-2); color:var(--text); }
+ 
+  .topbar-spacer{ flex:1; }
+ 
+  .fullscreen-btn{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--text);
+    font-family:inherit;
+    font-size:12.5px;
+    border-radius:8px;
+    padding:7px 12px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .fullscreen-btn:hover{ border-color:var(--accent-line); background:var(--accent-dim); }
+  .fullscreen-btn svg{ width:14px; height:14px; stroke:currentColor; }
+ 
+  /* ---------- body layout ---------- */
+  .body{
+    display:grid;
+    grid-template-columns:88px 1fr;
+    min-height:0;
+  }
+ 
+  .sidebar{
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    padding:16px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    overflow-y:auto;
+  }
+ 
+  .group-label{
+    font-size:9.5px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:0 2px;
+    font-family:'Space Grotesk',sans-serif;
+  }
+ 
+  .tool-group{
+    display:grid;
+    gap:8px;
+  }
+ 
+  .tool-btn{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    border:1px solid var(--border-soft);
+    background:var(--panel-2);
+    color:var(--muted);
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+ 
+  .tool-btn svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.6; }
+ 
+  .tool-btn:hover{ color:var(--text); border-color:var(--border); }
+ 
+  .tool-btn.active{
+    color:var(--accent);
+    border-color:var(--accent-line);
+    background:var(--accent-dim);
+  }
+ 
+  .tool-btn.active::after{
+    content:'';
+    position:absolute;
+    top:5px; right:5px;
+    width:4px; height:4px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+ 
+  .divider{ height:1px; background:var(--border-soft); margin:2px 0; }
+ 
+  .swatch-current{
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    border:1px solid var(--border);
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+  }
+  .swatch-current input[type="color"]{
+    position:absolute; inset:-4px;
+    width:calc(100% + 8px); height:calc(100% + 8px);
+    border:none; padding:0; cursor:pointer;
+  }
+ 
+  .size-control{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+  }
+ 
+  .size-preview{
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    border:1px solid var(--border-soft);
+    background:var(--panel-2);
+    display:grid;
+    place-items:center;
+  }
+  .size-preview .dot{
+    border-radius:50%;
+    background:var(--text);
+    transition:width .1s ease, height .1s ease;
+  }
+ 
+  .size-control input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+  }
+ 
+  .size-value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--muted);
+  }
+ 
+  .icon-btn{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    border:1px solid var(--border-soft);
+    background:var(--panel-2);
+    color:var(--muted);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .icon-btn svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.6; }
+  .icon-btn:hover{ color:var(--text); border-color:var(--border); }
+  .icon-btn.danger:hover{ color:#e5484d; border-color:rgba(229,72,77,0.4); background:rgba(229,72,77,0.08); }
+  .icon-btn.primary{
+    color:var(--bg);
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .icon-btn.primary:hover{ filter:brightness(1.08); }
+ 
+  /* ---------- main / canvas ---------- */
+  .main{
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    min-height:0;
+    padding:14px;
+    gap:12px;
+  }
+ 
+  .toolinfo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--muted);
+    font-family:'Space Grotesk',sans-serif;
+    padding:0 2px;
+  }
+  .toolinfo strong{ color:var(--text); font-weight:600; }
+  .toolinfo .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--accent);
+    background:var(--accent-dim);
+    border:1px solid var(--accent-line);
+    padding:2px 8px;
+    border-radius:20px;
+  }
+ 
+  .canvas-frame{
+    border-radius:14px;
+    background:
+      linear-gradient(180deg, #1b1e28, #14161e);
+    border:1px solid var(--border);
+    padding:10px;
+    min-height:0;
+    display:flex;
+  }
+ 
+  .canvas-inner{
+    flex:1;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 12px 30px -8px rgba(0,0,0,0.55);
+    background:var(--canvas-bg);
+  }
+ 
+  #canvas{
+    width:100%;
+    height:100%;
+    display:block;
+    cursor:crosshair;
+  }
+ 
+  .palette-dock{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:0 2px;
+  }
+ 
+  .palette{
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    flex:1;
+  }
+ 
+  .palette-btn{
+    width:22px; height:22px;
+    border-radius:7px;
+    border:2px solid transparent;
+    cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06);
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .palette-btn:hover{ transform:translateY(-2px); }
+  .palette-btn.active{
+    border-color:var(--accent);
+    transform:translateY(-2px);
+  }
+ 
+  /* ---------- status bar ---------- */
+  .statusbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    height:30px;
+    padding:0 16px;
+    background:var(--panel);
+    border-top:1px solid var(--border);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+  }
+  .statusbar .live{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .statusbar .live .pulse{
+    width:6px; height:6px;
+    border-radius:50%;
+    background:#3fd47a;
+    box-shadow:0 0 6px #3fd47a;
+  }
+ 
+  /* scrollbar */
+  .sidebar::-webkit-scrollbar{ width:6px; }
+  .sidebar::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+ 
+  @media (max-width: 860px){
+    .body{ grid-template-columns:72px 1fr; }
+    .brand span.full{ display:none; }
+    .menu{ display:none; }
+  }
+ 
+  @media (max-width: 620px){
+    .body{ grid-template-columns:64px 1fr; }
+    .sidebar{ padding:10px 8px; gap:14px; }
+    .group-label{ display:none; }
+    .main{ padding:8px; gap:8px; }
+    .canvas-frame{ padding:6px; }
+    .statusbar span:last-child{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+ 
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span><span class="full">Paint</span></div>
+    <div class="menu">
+      <span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Options</span><span>Help</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="fullscreen-btn" id="fullscreen-button" type="button">
+      <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      เต็มจอ
+    </button>
+  </div>
+ 
+  <div class="body">
+ 
+    <div class="sidebar">
+      <div>
+        <div class="group-label">Tools</div>
+        <div class="tool-group" style="margin-top:8px;">
+          <button class="tool-btn active" type="button" data-tool="pencil" title="ดินสอ">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 6.5l3 3"/></svg>
+          </button>
+          <button class="tool-btn" type="button" data-tool="line" title="เส้นตรง">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 19L19 5"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <button class="tool-btn" type="button" data-tool="rect" title="สี่เหลี่ยม">
+            <svg viewBox="0 0 24 24"><rect x="4.5" y="6" width="15" height="12" rx="1.5"/></svg>
+          </button>
+          <button class="tool-btn" type="button" data-tool="ellipse" title="วงรี">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+          </button>
+          <button class="tool-btn" type="button" data-tool="eraser" title="ยางลบ">
+            <svg viewBox="0 0 24 24"><path stroke-linejoin="round" d="M18 13l-7.5 7.5a2 2 0 0 1-2.8 0L4 16.8a2 2 0 0 1 0-2.8L13.5 4a2 2 0 0 1 2.8 0L20 7.7a2 2 0 0 1 0 2.8L18 13z"/><path d="M9 20h9"/></svg>
+          </button>
+        </div>
+      </div>
+ 
+      <div class="divider"></div>
+ 
+      <div>
+        <div class="group-label">Color</div>
+        <div class="swatch-current" style="margin-top:8px;">
+          <input id="color-picker" type="color" value="#16161a">
+        </div>
+      </div>
+ 
+      <div>
+        <div class="group-label">Width</div>
+        <div class="size-control" style="margin-top:8px;">
+          <div class="size-preview"><div class="dot" id="size-dot" style="width:4px;height:4px;"></div></div>
+          <input id="line-width" type="range" min="1" max="40" value="4">
+          <div class="size-value"><span id="line-size">4</span> px</div>
+        </div>
+      </div>
+ 
+      <div class="divider"></div>
+ 
+      <div>
+        <div class="group-label">Action</div>
+        <div class="tool-group" style="margin-top:8px;">
+          <button class="icon-btn danger" id="clear-button" type="button" title="ล้าง">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0l1 13a1 1 0 0 0 1 .9h8a1 1 0 0 0 1-.9l1-13"/></svg>
+          </button>
+          <button class="icon-btn primary" id="download-button" type="button" title="บันทึก">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="main">
+      <div class="toolinfo">
+        <span>เครื่องมือปัจจุบัน: <strong id="tool-name">ดินสอ</strong></span>
+        <span class="tag" id="tool-tag">PENCIL · 4px</span>
+      </div>
+ 
+      <div class="canvas-frame">
+        <div class="canvas-inner">
+          <canvas id="canvas" width="1600" height="1000"></canvas>
+        </div>
+      </div>
+ 
+      <div class="palette-dock">
+        <div class="palette" id="palette-row"></div>
+      </div>
+    </div>
+ 
+  </div>
+ 
+  <div class="statusbar">
+    <span class="live"><span class="pulse"></span>พร้อมใช้งาน</span>
+    <span id="coords">x: 0, y: 0</span>
+  </div>
+</div>
+ 
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const toolButtons = document.querySelectorAll('[data-tool]');
+  const colorPicker = document.getElementById('color-picker');
+  const lineWidthInput = document.getElementById('line-width');
+  const clearButton = document.getElementById('clear-button');
+  const downloadButton = document.getElementById('download-button');
+  const toolName = document.getElementById('tool-name');
+  const toolTag = document.getElementById('tool-tag');
+  const lineSize = document.getElementById('line-size');
+  const sizeDot = document.getElementById('size-dot');
+  const coordsDisplay = document.getElementById('coords');
+  const paletteRow = document.getElementById('palette-row');
+  const fullscreenButton = document.getElementById('fullscreen-button');
+ 
+  const toolLabels = {
+    pencil: 'ดินสอ', line: 'เส้นตรง', rect: 'สี่เหลี่ยม', ellipse: 'วงรี', eraser: 'ยางลบ'
+  };
+  const toolTags = {
+    pencil: 'PENCIL', line: 'LINE', rect: 'RECT', ellipse: 'ELLIPSE', eraser: 'ERASER'
+  };
+ 
+  let currentTool = 'pencil';
+  let currentColor = '#16161a';
+  let currentLineWidth = Number(lineWidthInput.value);
+  let drawing = false;
+  let startX = 0, startY = 0;
+  let savedImage = null;
+ 
+  const paletteColors = [
+    '#000000', '#4b5563', '#7c3aed', '#2563eb', '#1d4ed8', '#22c55e', '#14b8a6', '#0ea5e9',
+    '#facc15', '#f97316', '#ef4444', '#ec4899', '#a855f7', '#f43f5e', '#ffffff', '#d1d5db'
+  ];
+ 
+  function updateUI(){
+    toolName.textContent = toolLabels[currentTool];
+    toolTag.textContent = `${toolTags[currentTool]} · ${currentLineWidth}px`;
+    lineSize.textContent = currentLineWidth;
+    colorPicker.value = currentColor;
+    const dotSize = Math.max(2, Math.min(34, currentLineWidth));
+    sizeDot.style.width = dotSize + 'px';
+    sizeDot.style.height = dotSize + 'px';
+    document.querySelectorAll('.palette-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.color.toLowerCase() === currentColor.toLowerCase());
+    });
+  }
+ 
+  function buildPalette(){
+    paletteRow.innerHTML = '';
+    paletteColors.forEach(color=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'palette-btn';
+      btn.style.background = color;
+      btn.dataset.color = color;
+      btn.title = color;
+      btn.addEventListener('click', ()=>{ currentColor = color; updateUI(); });
+      paletteRow.appendChild(btn);
+    });
+  }
+ 
+  function resizeCanvas(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const scale = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.floor(rect.width * scale));
+    const height = Math.max(1, Math.floor(rect.height * scale));
+ 
+    const temp = document.createElement('canvas');
+    temp.width = canvas.width;
+    temp.height = canvas.height;
+    temp.getContext('2d').drawImage(canvas, 0, 0);
+ 
+    canvas.width = width;
+    canvas.height = height;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(temp, 0, 0, temp.width, temp.height, 0, 0, width, height);
+  }
+ 
+  function setActiveTool(tool){
+    currentTool = tool;
+    toolButtons.forEach(btn=> btn.classList.toggle('active', btn.dataset.tool === tool));
+    canvas.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+    updateUI();
+  }
+ 
+  toolButtons.forEach(btn=> btn.addEventListener('click', ()=> setActiveTool(btn.dataset.tool)));
+  colorPicker.addEventListener('input', e=>{ currentColor = e.target.value; updateUI(); });
+  lineWidthInput.addEventListener('input', e=>{ currentLineWidth = Number(e.target.value); updateUI(); });
+ 
+  clearButton.addEventListener('click', ()=>{
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
+ 
+  downloadButton.addEventListener('click', ()=>{
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'paint.png';
+    link.click();
+  });
+ 
+  function drawLine(x1,y1,x2,y2){
+    ctx.strokeStyle = currentColor;
+    ctx.lineWidth = currentLineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+ 
+  function drawRect(x1,y1,x2,y2){
+    ctx.strokeStyle = currentColor;
+    ctx.lineWidth = currentLineWidth;
+    ctx.lineJoin = 'round';
+    const left = Math.min(x1,x2), top = Math.min(y1,y2);
+    ctx.strokeRect(left, top, Math.abs(x2-x1), Math.abs(y2-y1));
+  }
+ 
+  function drawEllipse(x1,y1,x2,y2){
+    ctx.strokeStyle = currentColor;
+    ctx.lineWidth = currentLineWidth;
+    ctx.beginPath();
+    const cx=(x1+x2)/2, cy=(y1+y2)/2, rx=Math.abs(x2-x1)/2, ry=Math.abs(y2-y1)/2;
+    if (rx===0 || ry===0) return;
+    ctx.ellipse(cx,cy,rx,ry,0,0,2*Math.PI);
+    ctx.stroke();
+  }
+ 
+  function saveCanvasState(){ savedImage = ctx.getImageData(0,0,canvas.width,canvas.height); }
+  function restoreCanvasState(){ if (savedImage) ctx.putImageData(savedImage,0,0); }
+ 
+  function getPointerPosition(event){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * (canvas.width / rect.width),
+      y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
+ 
+  canvas.addEventListener('pointerdown', event=>{
+    event.preventDefault();
+    drawing = true;
+    const pos = getPointerPosition(event);
+    startX = pos.x; startY = pos.y;
+ 
+    if (currentTool === 'pencil' || currentTool === 'eraser'){
+      ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+      ctx.lineWidth = currentLineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+    } else {
+      saveCanvasState();
+    }
+    canvas.setPointerCapture(event.pointerId);
+  });
+ 
+  canvas.addEventListener('pointermove', event=>{
+    const pos = getPointerPosition(event);
+    const scale = canvas.width / canvas.getBoundingClientRect().width;
+    coordsDisplay.textContent = `x: ${Math.round(pos.x/scale)}, y: ${Math.round(pos.y/scale)}`;
+    if (!drawing) return;
+    const x = pos.x, y = pos.y;
+ 
+    if (currentTool === 'pencil' || currentTool === 'eraser'){
+      ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+      ctx.lineWidth = currentLineWidth;
+      ctx.lineTo(x,y);
+      ctx.stroke();
+      return;
+    }
+ 
+    restoreCanvasState();
+    if (currentTool === 'line') drawLine(startX,startY,x,y);
+    else if (currentTool === 'rect') drawRect(startX,startY,x,y);
+    else if (currentTool === 'ellipse') drawEllipse(startX,startY,x,y);
+  });
+ 
+  canvas.addEventListener('pointerup', event=>{
+    if (!drawing) return;
+    drawing = false;
+    const pos = getPointerPosition(event);
+    if (currentTool === 'line') drawLine(startX,startY,pos.x,pos.y);
+    else if (currentTool === 'rect') drawRect(startX,startY,pos.x,pos.y);
+    else if (currentTool === 'ellipse') drawEllipse(startX,startY,pos.x,pos.y);
+    canvas.releasePointerCapture(event.pointerId);
+  });
+ 
+  canvas.addEventListener('pointerleave', ()=>{
+    if (drawing && (currentTool === 'pencil' || currentTool === 'eraser')) drawing = false;
+  });
+ 
+  fullscreenButton.addEventListener('click', ()=>{
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+ 
+  buildPalette();
+  updateUI();
+  resizeCanvas();
+ 
+  window.addEventListener('resize', resizeCanvas);
+</script>
+</body>
+</html>
