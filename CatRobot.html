@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Assignment #3 : Next Gen Rendering</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+    <!-- โหลดไลบรารี Three.js, OrbitControls, RGBELoader, GLTFLoader และ lil-gui -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.18"></script>
+</head>
+
+<body>
+    <script>
+        // 1. ตั้งค่าพื้นฐาน: Scene, Camera, Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        document.body.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 6);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        // ปิดการ Pan กล้อง เพื่อเวลาหมุนดูฉากจะได้ไม่รู้สึกหลุดกรอบ HDRI
+        controls.enablePan = false;
+
+        // 2. โหลด HDRI (Ferndale Studio 04) สำหรับสะท้อนแสง PBR
+        const hdrUrl = 'https://raw.githubusercontent.com/phasineep-ctrl/phasinee./main/ninomaru_teien_1k.hdr';
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        new THREE.RGBELoader().setDataType(THREE.UnsignedByteType).load(hdrUrl, (texture) => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+
+            // เปิด HDRI เป็นฉากหลังกลับมา เพื่อโชว์อาจารย์ว่าเราทำ Environment Map ได้!
+            scene.background = envMap;
+
+            // ให้แสงสะท้อนจาก HDRI ลงบนวัตถุ
+            scene.environment = envMap;
+
+            texture.dispose();
+            pmremGenerator.dispose();
+        });
+
+        // 3. ระบบแสง (Lighting)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(5, 5, 5);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // หน้าต่าง GUI ควบคุม
+        const gui = new lil.GUI({ title: 'Control Panel' });
+        const lightFolder = gui.addFolder('💡 ตำแหน่งแหล่งกำเนิดแสง');
+        lightFolder.add(dirLight.position, 'x', -10, 10).name('แกน X');
+        lightFolder.add(dirLight.position, 'y', 1, 15).name('แกน Y');
+        lightFolder.add(dirLight.position, 'z', -10, 10).name('แกน Z');
+        lightFolder.add(dirLight, 'intensity', 0, 5).name('ความสว่าง');
+
+        // 4. วัสดุ PBR และวัตถุ (Characters & Structures)
+        const gltfLoader = new THREE.GLTFLoader();
+        const robotUrl = 'https://raw.githubusercontent.com/phasineep-ctrl/phasinee./main/Catrobot.glb';
+
+        gltfLoader.load(robotUrl, (gltf) => {
+            const robot = gltf.scene;
+
+            robot.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            // อัปเดตพิกัดวัตถุทั้งหมดก่อนคำนวณตำแหน่งจริง
+            robot.updateMatrixWorld(true);
+
+            const box = new THREE.Box3().setFromObject(robot);
+            const minY = box.min.y;
+
+            // หากเท่ายังดูลอยอยู่ ให้ปรับเพิ่มค่า offset ตรงนี้ (เช่น 0.05 ถึง 0.15) เพื่อกดเท้าลงพื้น
+            const offset = 0.08;
+            robot.position.set(0, -minY - offset, 0);
+
+            robot.scale.set(1, 1, 1);
+            robot.name = 'myRobot';
+            scene.add(robot);
+
+            // GUI ปรับระดับ Y แบบละเอียดเรียลไทม์
+            const robotFolder = gui.addFolder('🤖 ปรับตำแหน่งหุ่นยนต์');
+            robotFolder.add(robot.position, 'x', -5, 5, 0.1).name('แกน X');
+            robotFolder.add(robot.position, 'z', -5, 5, 0.1).name('แกน Z');
+        });
+        // โหลดเก้าอี้
+        const chairUrl = 'https://raw.githubusercontent.com/phasineep-ctrl/phasinee./main/home.glb';
+        gltfLoader.load(chairUrl, (gltf) => {
+            const chair = gltf.scene;
+            chair.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            // ขยายขนาดวัตถุให้ใหญ่ขึ้น (สามารถปรับเลข 3 เพื่อเปลี่ยนขนาดได้)
+            chair.scale.set(3, 3, 3);
+
+            // คำนวณให้ขาเก้าอี้ติดพื้น Y = 0
+            const chairBox = new THREE.Box3().setFromObject(chair);
+            const chairMinY = chairBox.min.y;
+            chair.position.set(-2, -chairMinY, -2);
+
+            scene.add(chair);
+        });
+
+
+
+        // 6. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const myRobot = scene.getObjectByName('myRobot');
+            if (myRobot) {
+                myRobot.rotation.y += 0.01;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+
+</html>
