@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer - Dog Island</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #1a1e24;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            outline: none;
+            cursor: grab;
+        }
+
+        model-viewer:active {
+            cursor: grabbing;
+        }
+
+        /* Top info bar */
+        #top-bar {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .badge {
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 400;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Bottom navigation controls */
+        #controls {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 6px 10px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .nav-btn {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e0e6ed;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            border-color: #60a5fa;
+            box-shadow: 0 0 16px rgba(59, 130, 246, 0.5);
+        }
+
+        .divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            margin: 0 2px;
+        }
+
+        /* 3D Hotspot Buttons overlaying the 3D buttons */
+        .hotspot-btn {
+            width: 90px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.01);
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+        }
+
+        .hotspot-btn:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border: 2px solid #60a5fa;
+            opacity: 1;
+            transform: scale(1.08);
+            box-shadow: 0 0 16px rgba(96, 165, 250, 0.6);
+        }
+
+        /* Tooltip hint */
+        #hint {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: #93c5fd;
+            font-size: 13px;
+            padding: 5px 14px;
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="top-bar">
+        <div class="badge" id="anim-name">⏳ กำลังโหลดโมเดล...</div>
+        <div class="badge" id="view-name">🏠 หน้าแรก</div>
+    </div>
+
+    <div id="hint">💡 คลิกที่ปุ่ม 3D (Profile / Credit / Home) ในโมเดล หรือใช้แถบเมนูด้านล่าง</div>
+
+    <model-viewer id="viewer"
+        src="https://raw.githubusercontent.com/phasineep-ctrl/phasinee./main/sae.glb"
+        alt="3D Model of Dog Island"
+        camera-controls
+        auto-rotate
+        rotation-per-second="20deg"
+        interaction-prompt="none"
+        min-camera-orbit="auto auto 0m"
+        max-camera-orbit="auto auto 25m"
+        min-field-of-view="10deg"
+        max-field-of-view="80deg"
+        environment-image="https://modelviewer.dev/shared-assets/environments/spruit_sunrise_1k_HDR.hdr"
+        skybox-image="https://modelviewer.dev/shared-assets/environments/spruit_sunrise_1k_HDR.hdr"
+        shadow-intensity="2"
+        shadow-softness="0.5"
+        exposure="1.2"
+        tone-mapping="commerce"
+        autoplay>
+
+        <!-- Hotspot บนปุ่ม Profile 3D -->
+        <button class="hotspot-btn" slot="hotspot-profile"
+            data-position="3.67m 1.47m 1.07m"
+            data-normal="0m 0m 1m"
+            onclick="goToView('profile')"
+            title="คลิกเพื่อไปที่ A Text ในบ้าน (Profile)">
+        </button>
+
+        <!-- Hotspot บนปุ่ม Credit 3D -->
+        <button class="hotspot-btn" slot="hotspot-credit"
+            data-position="3.68m 0.61m 1.07m"
+            data-normal="0m 0m 1m"
+            onclick="goToView('credit')"
+            title="คลิกเพื่อไปที่ A Text (Credit)">
+        </button>
+
+        <!-- Hotspot บนปุ่ม Home 3D (ที่ผนังข้าง Credit) -->
+        <button class="hotspot-btn" slot="hotspot-home-credit"
+            data-position="-4.88m 2.06m -4.25m"
+            data-normal="-0.94m 0.06m 0.34m"
+            onclick="goToView('home')"
+            title="คลิกกลับหน้าแรก (Home)">
+        </button>
+
+        <!-- Hotspot บนปุ่ม Home 3D (ในบ้าน ข้างข้อความ Profile) -->
+        <button class="hotspot-btn" slot="hotspot-home-profile"
+            data-position="-2.24m 0.11m -5.66m"
+            data-normal="0m 1m 0m"
+            onclick="goToView('home')"
+            title="คลิกกลับหน้าแรก (Home)">
+        </button>
+
+    </model-viewer>
+
+    <!-- Controls Menu Bar -->
+    <div id="controls">
+        <button class="nav-btn active" id="btn-home" onclick="goToView('home')">
+            🏠 หน้าแรก
+        </button>
+        <button class="nav-btn" id="btn-profile" onclick="goToView('profile')">
+            👤 Profile
+        </button>
+        <button class="nav-btn" id="btn-credit" onclick="goToView('credit')">
+            📜 Credit
+        </button>
+        <div class="divider"></div>
+        <button class="nav-btn" id="playBtn" onclick="togglePlay()">
+            ⏸ หยุด
+        </button>
+    </div>
+
+    <script>
+        const viewer = document.getElementById('viewer');
+        const animLabel = document.getElementById('anim-name');
+        const viewLabel = document.getElementById('view-name');
+        const playBtn = document.getElementById('playBtn');
+        let playing = true;
+        let currentView = 'home';
+
+        // ตำแหน่งกล้องแต่ละมุมมอง (Target & Orbit)
+        const VIEWS = {
+            home: {
+                target: "0m 1m 0m",
+                orbit: "15deg 75deg 7.5m",
+                fov: "45deg",
+                autoRotate: true,
+                title: "🏠 หน้าแรก"
+            },
+            profile: {
+                // มุมมอง Profile — ตามพิกัดที่ผู้ใช้เลือก
+                target: "-3.20m 0.35m -6.35m",
+                orbit: "-72.3deg 22.5deg 3.25m",
+                fov: "52deg",
+                autoRotate: false,
+                title: "👤 โปรไฟล์ (Profile)"
+            },
+            credit: {
+                // ซูมไปที่ A Text ฝั่ง Credit (Node 100 Text.001 CREDITS & REFERENCES)
+                target: "-5.34m 1.62m -5.56m",
+                orbit: "-70deg 86deg 3.2m",
+                fov: "45deg",
+                autoRotate: false,
+                title: "📜 เครดิต (Credits & References)"
+            }
+        };
+
+        // เมื่อโมเดลโหลดเสร็จ
+        viewer.addEventListener('load', () => {
+            const animations = viewer.availableAnimations;
+            console.log('Animations found:', animations);
+
+            if (animations.length > 0) {
+                viewer.animationName = animations[0];
+                viewer.play({ repetitions: Infinity });
+                animLabel.textContent = '🐾 ' + animations[0];
+            } else {
+                animLabel.textContent = '🐾 Dog Island';
+            }
+
+            // ตั้งค่ามุมเริ่มต้น
+            goToView('home');
+        });
+
+        // ฟังก์ชันเปลี่ยนมุมกล้อง
+        function goToView(viewKey) {
+            const config = VIEWS[viewKey];
+            if (!config) return;
+
+            currentView = viewKey;
+
+            // กำหนดเป้าหมายและมุมกล้อง
+            viewer.cameraTarget = config.target;
+            viewer.cameraOrbit = config.orbit;
+            if (config.fov) {
+                viewer.fieldOfView = config.fov;
+            }
+
+            // เปิด/ปิดการหมุนอัตโนมัติ (หยุดหมุนเมื่ออ่านข้อความ)
+            viewer.autoRotate = config.autoRotate;
+
+            // อัปเดต UI
+            viewLabel.textContent = config.title;
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('btn-' + viewKey);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            console.log(`Switched to ${viewKey}: target=${config.target}, orbit=${config.orbit}`);
+        }
+
+        // ==========================================
+        // ระบบตรวจจับการคลิกบนปุ่ม 3D ในโมเดลโดยตรง (Raycasting)
+        // ==========================================
+        let pointerDownPos = { x: 0, y: 0 };
+
+        viewer.addEventListener('pointerdown', (e) => {
+            pointerDownPos = { x: e.clientX, y: e.clientY };
+        });
+
+        viewer.addEventListener('pointerup', (e) => {
+            // ถ้าเป็นการลากหมุนกล้อง (ระยะเกิน 8px) จะไม่ถือว่าเป็นการคลิก
+            const dx = e.clientX - pointerDownPos.x;
+            const dy = e.clientY - pointerDownPos.y;
+            if (Math.hypot(dx, dy) > 8) return;
+
+            // ยิง Raycast หาจุดบนโมเดล 3D
+            const hit = viewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+            if (!hit) return;
+
+            const { x, y, z } = hit.position;
+            console.log(`Clicked 3D pos: x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
+
+            // คำนวณระยะห่างจากปุ่มแต่ละปุ่มในโมเดล 3D
+            const distProfile     = Math.hypot(x - 3.67, y - 1.47, z - 1.07);
+            const distCredit      = Math.hypot(x - 3.68, y - 0.61, z - 1.07);
+            const distHomeCredit  = Math.hypot(x - (-4.88), y - 2.06, z - (-4.25));
+            const distHomeProfile = Math.hypot(x - (-2.24), y - 0.11, z - (-5.66));
+
+            if (distProfile < 0.75) {
+                console.log('🎯 Clicked Profile 3D Button');
+                goToView('profile');
+            } else if (distCredit < 0.75) {
+                console.log('🎯 Clicked Credit 3D Button');
+                goToView('credit');
+            } else if (distHomeCredit < 0.85 || distHomeProfile < 0.65) {
+                console.log('🎯 Clicked Home 3D Button');
+                goToView('home');
+            }
+        });
+
+        // เปลี่ยน Cursor เป็น pointer เมื่อเมาส์ชี้โดนปุ่ม 3D
+        viewer.addEventListener('pointermove', (e) => {
+            if (e.buttons > 0) return; // กำลังกดลากอยู่
+            const hit = viewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+            if (!hit) {
+                viewer.style.cursor = 'grab';
+                return;
+            }
+            const { x, y, z } = hit.position;
+            const distProfile     = Math.hypot(x - 3.67, y - 1.47, z - 1.07);
+            const distCredit      = Math.hypot(x - 3.68, y - 0.61, z - 1.07);
+            const distHomeCredit  = Math.hypot(x - (-4.88), y - 2.06, z - (-4.25));
+            const distHomeProfile = Math.hypot(x - (-2.24), y - 0.11, z - (-5.66));
+
+            if (distProfile < 0.75 || distCredit < 0.75 || distHomeCredit < 0.85 || distHomeProfile < 0.65) {
+                viewer.style.cursor = 'pointer';
+            } else {
+                viewer.style.cursor = 'grab';
+            }
+        });
+
+        // สลับเล่น/หยุดแอนิเมชัน
+        function togglePlay() {
+            if (playing) {
+                viewer.pause();
+                playBtn.textContent = '▶ เล่น';
+                playing = false;
+            } else {
+                viewer.play({ repetitions: Infinity });
+                playBtn.textContent = '⏸ หยุด';
+                playing = true;
+            }
+        }
+
+        // ซ่อน hint อัตโนมัติหลัง 6 วินาที
+        setTimeout(() => {
+            const hint = document.getElementById('hint');
+            if (hint) hint.style.opacity = '0';
+        }, 6000);
+
+        // ==========================================
+        // กดปุ่ม 'c' เพื่อดูพิกัดกล้อง (แสดงบนหน้าจอด้วย)
+        // ==========================================
+        const camToast = document.createElement('div');
+        camToast.id = 'cam-toast';
+        camToast.style.cssText = `
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #0ff; font-family: monospace;
+            font-size: 12px; padding: 10px 16px; border-radius: 8px;
+            border: 1px solid #0ff4; pointer-events: none;
+            opacity: 0; transition: opacity 0.3s; z-index: 9999;
+            white-space: pre; text-align: center; line-height: 1.6;
+        `;
+        document.body.appendChild(camToast);
+        let camToastTimer = null;
+
+        function showCamCoords() {
+            const orb = viewer.getCameraOrbit();
+            const tar = viewer.getCameraTarget();
+            const thetaDeg = (orb.theta * 180 / Math.PI).toFixed(1);
+            const phiDeg   = (orb.phi   * 180 / Math.PI).toFixed(1);
+            const radius   = orb.radius.toFixed(2);
+            const msg = `📷 orbit: "${thetaDeg}deg ${phiDeg}deg ${radius}m"\ntarget: "${tar.x.toFixed(2)}m ${tar.y.toFixed(2)}m ${tar.z.toFixed(2)}m"`;
+            console.log(msg);
+            camToast.textContent = msg;
+            camToast.style.opacity = '1';
+            clearTimeout(camToastTimer);
+            camToastTimer = setTimeout(() => { camToast.style.opacity = '0'; }, 4000);
+        }
+
+        // ใช้ capture:true เพื่อจับ event ก่อน model-viewer shadow DOM
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'c' || e.key === 'C') showCamCoords();
+        }, true);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'c' || e.key === 'C') showCamCoords();
+        }, true);
+    </script>
+
+</body>
+
+</html>
